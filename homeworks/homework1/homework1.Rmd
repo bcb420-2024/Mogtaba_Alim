@@ -1,0 +1,57 @@
+---
+title: "homework1"
+output: pdf_document
+date: "2024-01-29"
+---
+
+```{r}
+# Load the required packages
+library(DESeq2)
+library(pheatmap)
+```
+
+```{r}
+# Create a 5 x 10 matrix of random integers from 1 to 1000
+fold_matrix <- matrix(sample(1:1000, 50, replace = TRUE), nrow = 5, ncol = 10)
+fold_matrix
+```
+
+```{r}
+# Define the column and row names
+colnames(fold_matrix) <- c('cond1', 'cond2', 'cond3', 'cond4', 'cond5', 'ctrl1', 'ctrl2', 'ctrl3', 'ctrl4', 'ctrl5')
+rownames(fold_matrix) <- paste0('gene', 1:5)
+
+fold_matrix
+```
+
+```{r}
+# Define the column and row names
+colnames(fold_matrix) <- c('cond1', 'cond2', 'cond3', 'cond4', 'cond5', 'ctrl1', 'ctrl2', 'ctrl3', 'ctrl4', 'ctrl5')
+rownames(fold_matrix) <- paste0('gene', 1:5)
+
+# Create a DataFrame for the column data
+col_data <- data.frame(
+  condition = factor(c(rep("condition", 5), rep("control", 5)))
+)
+
+fold_matrix
+```
+
+```{r}
+# Create a DESeqDataSet object
+desDataSet <- DESeqDataSetFromMatrix(countData = fold_matrix, colData = col_data, design = ~ condition)
+```
+
+```{r}
+# Perform the differential expression analysis
+desDataSet <- DESeq(desDataSet)
+```
+
+```{r}
+# Calculate fold change
+res <- results(desDataSet)
+final <- res$baseMean
+final
+```
+
+
