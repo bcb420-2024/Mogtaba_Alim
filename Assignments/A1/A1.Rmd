@@ -9,9 +9,9 @@ output:
 bibliography: references.bib
 ---
 
-# The Dataset
+# 1. The Dataset
 
-## Dataset Description [q1]
+## A. Dataset Description
 
 The dataset that we are investigating is consolidated from a GEO (Gene
 Expression Omnibus) series
@@ -63,7 +63,7 @@ head(counts_data)
 head(gene_annotations)
 ```
 
-## Explaining the Samples
+## B. Explaining the Samples
 
 In the experiment there are 24 different samples
 
@@ -87,11 +87,13 @@ Therefore, we see that overall the quality of our samples is really
 high, with 4 different cell lines each with test and control experiments
 and each having 3 replicates, making our results easier to analyze. (@datasetSource)
 
-# Dataset Statistics and Quality
+# 2. Dataset Statistics and Quality
 
 In this section we will be looking at the dataset statistics. This will
 allow us to evaluate the quality of the data as well as identify any
 potential outliers. We will be using the `dplyr` package (@dplyr)
+
+## A. General Dataset Statistics
 
 ```{r}
 library(dplyr)
@@ -130,6 +132,7 @@ colnames(basic_stats_df) <- c("Total Counts", "Mean Counts", "Median Counts", "S
 basic_stats_df
 ```
 
+## B. Distribution Visualization
 Now that we have seen the basic stats for different samples we will be
 visualizing our data. 1. A `Boxplot` which will allow us to show the
 distribution of expression levels for each sample, highlighting the
@@ -201,16 +204,18 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
 
 ```
 
+# 3. Dataset Filtering and Standardization
+
 We see that we start with 39376 values in our dataset pre-filtering.
 This number is a further reduction from the original 58786 that was in
 the original dataset that had no gene identifiers. The current number of
-39376 is the number of genes that were used in the analysis on Geo2R. \#
+39376 is the number of genes that were used in the analysis on Geo2R. 
 Filtering the Dataset In this section we will be filtering the dataset.
 This includes identifying duplicate expressions, removing expressions
 with low counts per million (cpm) and finally ensuring that all gene
 names are HGNC compliant.
 
-## Duplicate Identification
+## A. Duplicate Identification
 
 ```{r}
 # Find the duplicate row names
@@ -226,7 +231,7 @@ length(counts_data_unique) - length(counts_data_df)
 We can see from our code that we do not have any duplicate expressions
 in our dataset.
 
-## Removing Low CPM Expressions
+## B. Removing Low CPM Expressions
 
 We will be using the `edgeR` package for our CPM calculations and filtering (@edgeR)
 ```{r}
@@ -262,7 +267,7 @@ As we can see from our output above that we started out with 39373
 genes, and we had 20324 genes that did not pass our threshold leaving us
 with 19052 genes.
 
-## Replicates
+## C. Replicates
 
 In this experiment for each of the cell lines there were 3 replicates for the
 control and 3 replicates for the cell lines treated with CPPD, with the 
@@ -274,7 +279,7 @@ that we have multiple samples to analyze and becayse from our graph of data
 pre-filtering we saw that the expression counts were not extremly similar when 
 it comes to the replicates. 
 
-## Standardize gene names with HUGO
+## D. Standardize gene names with HUGO
 
 In this section we will be mapping the gene identifiers to HUGO Symbols.
 This will allow us to standardize the gene names. We will also identify
@@ -310,12 +315,12 @@ num_rows_with_na
 We have now converted all the gene names to HGNC symbols and we saw that
 we have all the genes with their HGNC names.
 
-## Dataset Statistics and Distribution Plots
+## E. Dataset Statistics and Distribution Plots
 
 We will now re-calculate the statistics for our dataset post filtering,
 as well as plot the graphs of the counts sample distribution.
 
-### Genereal Statistics
+### i.Genereal Statistics
 
 ```{r}
 filtered_counts_df <- as.data.frame(filtered_counts)
@@ -349,7 +354,7 @@ filtered_stats_df
 
 ```
 
-### Distribution Plots
+### ii. Distribution Plots
 
 1.  `Boxplot`
 
@@ -413,7 +418,7 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
        merge = TRUE, bg = "gray90", ncol = 3)  
 ```
 
-## Outlier Identification
+## F. Outlier Identification
 
 From our graphs above, especially the box plot we can clearly identify
 outliers in our samples. These outliers are greatly visible and abundant
@@ -427,12 +432,12 @@ able to conclude that the outliers are not part of the actual
 experimental data and that they are due to issues in th experimental
 procedure.
 
-## Final Coverage
+## G. Final Coverage
 
 We can see that after all our filtering we are left with 19052 genes from our 
 original counts data. This gives us a coverage of $34.385\%$
 
-# Normalization
+# 4. Normalization
 
 For this dataset we will be using the Trimmed Mean of M-values (TMM)
 method to normalize our data. This is because this method corrects for
@@ -442,7 +447,7 @@ comparisons across samples (@compNormsApps)
 
 By trimming or ignoring the most extreme M-values (log-ratios of expression), TMM normalization minimizes the influence of outliers or genes with extreme expression differences (@RPubsNormStrats)
 
-## TMM
+## A. TMM
 The following chunk contains the code for TMM normalization it was inspired by
 a forum from biostars (@tmmNorm)
 ```{r}
@@ -463,7 +468,7 @@ head(norm_counts)
 
 ```
 
-## Visualization
+## B. Visualization
 
 1. `MDS` or Multidimension Scaling is a data analysis techinique that is used to
 represent the closeness in relationship of two objects. What it does is allow us
@@ -554,6 +559,8 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
 
 
 ```
+
+
 4. `Dispersion`. This allows to describe the amount of difference between our
 mean and our variance. 
 
@@ -561,10 +568,13 @@ mean and our variance.
 # Create a DGEList object
 disp_norm_dge <- edgeR::DGEList(counts = norm_counts, genes = gene_symbols)
 
+# Estimate the Common Dispersion
 disp_norm_dge <- edgeR::estimateCommonDisp(disp_norm_dge)
 
+# Estimate the Tagwise Dispersion
 disp_norm_dge <- edgeR::estimateTagwiseDisp(disp_norm_dge)
 
+# Estimate the Trended Dispersion
 disp_norm_dge <- edgeR::estimateTrendedDisp(disp_norm_dge)
 
 edgeR::plotBCV(disp_norm_dge, col.tagwise = "black", col.common = "red", col.trend = "blue")
@@ -572,5 +582,5 @@ edgeR::plotBCV(disp_norm_dge, col.tagwise = "black", col.common = "red", col.tre
 
 ```
 
-# References
+# 5. References
 
