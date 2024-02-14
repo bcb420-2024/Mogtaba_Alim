@@ -13,27 +13,11 @@ bibliography: references.bib
 
 ## A. Dataset Description
 
-The dataset that we are investigating is consolidated from a GEO (Gene
-Expression Omnibus) series
-[GSE213102](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213102).
-The title of this study is `Molecular mechanisms associated with cis-platin intrinsic resistance in early drug-tolerant persister cells of lung adenocarcinoma cell lines` [@datasetSource].
+The dataset that we are investigating is consolidated from a GEO (Gene Expression Omnibus) series [GSE213102](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213102). The title of this study is `Molecular mechanisms associated with cis-platin intrinsic resistance in early drug-tolerant persister cells of lung adenocarcinoma cell lines` [@datasetSource].
 
-Cisplatin is drug used in cancer treatment, and resistance to it is the
-primary cause for the failure of treatment in lung adenocarcinoma. The
-cause for this resistance are Drug-tolerant-perisitor (DTP) cells, which
-can survive the treatment and act as a bank for the emergence of other
-similarly resistant cells. This experiment investigates the early
-changes to the DTP cells when exposed to Cisplatin, and trys to
-establish gene expression signatures associated with the emergence of
-these cells in lung adenocarcinoma.
+Cisplatin is drug used in cancer treatment, and resistance to it is the primary cause for the failure of treatment in lung adenocarcinoma. The cause for this resistance are Drug-tolerant-perisitor (DTP) cells, which can survive the treatment and act as a bank for the emergence of other similarly resistant cells. This experiment investigates the early changes to the DTP cells when exposed to Cisplatin, and trys to establish gene expression signatures associated with the emergence of these cells in lung adenocarcinoma.
 
-I'm very interested in this experiment because it relates to the work I
-currently do as a researcher. Where in my lab one of the main focuses is
-pharmacogenomics, which is the study of how drugs affects cells, and
-particularly cancer cells. I am currently working on creating machine
-learning models that try and predict cancer prognosis in Non-small Cell
-Lung Cancer(NSCLC), and so understanding the root cause for the
-emergence of drug resistant cells, is very important for me.
+I'm very interested in this experiment because it relates to the work I currently do as a researcher. Where in my lab one of the main focuses is pharmacogenomics, which is the study of how drugs affects cells, and particularly cancer cells. I am currently working on creating machine learning models that try and predict cancer prognosis in Non-small Cell Lung Cancer(NSCLC), and so understanding the root cause for the emergence of drug resistant cells, is very important for me.
 
 ```{r, warning=FALSE, message=FALSE}
 # loading the counts dataset from GEO into a table
@@ -67,31 +51,17 @@ head(gene_annotations)
 
 In the experiment there are 24 different samples
 
-In the original experiment there are 24 different samples. These samples
-consist of 4 cell lines which are A549, H1299, H1573 and 3B1A. For each
-of these cell lines the original experiment had 3 control and 3 test
-replicates. However, in the labeled data that we pulled from Geo2R there
-are only 22 samples, which is because one control and one test replicate
-each were removed for the 3B1A cell line.
+In the original experiment there are 24 different samples. These samples consist of 4 cell lines which are A549, H1299, H1573 and 3B1A. For each of these cell lines the original experiment had 3 control and 3 test replicates. However, in the labeled data that we pulled from Geo2R there are only 22 samples, which is because one control and one test replicate each were removed for the 3B1A cell line.
 
-All cells were harvested by enzymatic treatment with a viability \>95%.
-All the cells were seeded in 96-well plates where the A549 and H1299
-cell lines had $1.2\text{x}10^4$ cells and H1573 and 3B1A cell lines had
-$5\text{x}10^4$ cells.
+All cells were harvested by enzymatic treatment with a viability \>95%. All the cells were seeded in 96-well plates where the A549 and H1299 cell lines had $1.2\text{x}10^4$ cells and H1573 and 3B1A cell lines had $5\text{x}10^4$ cells.
 
-For the test samples, the cell lines were all treated with serial
-dilutions of Cisplatin (CDDP) ranging from 5 to 160 $\mu M$ for 24
-hours.
+For the test samples, the cell lines were all treated with serial dilutions of Cisplatin (CDDP) ranging from 5 to 160 $\mu M$ for 24 hours.
 
-Therefore, we see that overall the quality of our samples is really
-high, with 4 different cell lines each with test and control experiments
-and each having 3 replicates, making our results easier to analyze. (@datasetSource)
+Therefore, we see that overall the quality of our samples is really high, with 4 different cell lines each with test and control experiments and each having 3 replicates, making our results easier to analyze. (@datasetSource)
 
 # 2. Dataset Statistics and Quality
 
-In this section we will be looking at the dataset statistics. This will
-allow us to evaluate the quality of the data as well as identify any
-potential outliers. We will be using the `dplyr` package (@dplyr)
+In this section we will be looking at the dataset statistics. This will allow us to evaluate the quality of the data as well as identify any potential outliers. We will be using the `dplyr` package (@dplyr)
 
 ## A. General Dataset Statistics
 
@@ -133,10 +103,8 @@ basic_stats_df
 ```
 
 ## B. Distribution Visualization
-Now that we have seen the basic stats for different samples we will be
-visualizing our data. 1. A `Boxplot` which will allow us to show the
-distribution of expression levels for each sample, highlighting the
-median, interquartile range, and potential outliers.
+
+Now that we have seen the basic stats for different samples we will be visualizing our data. 1. A `Boxplot` which will allow us to show the distribution of expression levels for each sample, highlighting the median, interquartile range, and potential outliers.
 
 ```{r, message=FALSE}
 
@@ -161,9 +129,7 @@ abline(h = median(apply(dataset_log, 2, median)),
 
 ```
 
-2.  A `density plot` will provide a smooth estimate of the distribution
-    of expression levels across all samples, useful for comparing the
-    overall shape of distributions.
+2.  A `density plot` will provide a smooth estimate of the distribution of expression levels across all samples, useful for comparing the overall shape of distributions.
 
 ```{r}
 dataset_counts_den <- apply(log2(counts_data), 2, density)
@@ -206,14 +172,7 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
 
 # 3. Dataset Filtering and Standardization
 
-We see that we start with 39376 values in our dataset pre-filtering.
-This number is a further reduction from the original 58786 that was in
-the original dataset that had no gene identifiers. The current number of
-39376 is the number of genes that were used in the analysis on Geo2R. 
-Filtering the Dataset In this section we will be filtering the dataset.
-This includes identifying duplicate expressions, removing expressions
-with low counts per million (cpm) and finally ensuring that all gene
-names are HGNC compliant.
+We see that we start with 39376 values in our dataset pre-filtering. This number is a further reduction from the original 58786 that was in the original dataset that had no gene identifiers. The current number of 39376 is the number of genes that were used in the analysis on Geo2R. Filtering the Dataset In this section we will be filtering the dataset. This includes identifying duplicate expressions, removing expressions with low counts per million (cpm) and finally ensuring that all gene names are HGNC compliant.
 
 ## A. Duplicate Identification
 
@@ -228,12 +187,12 @@ print("The number of duplicate rows:")
 length(counts_data_unique) - length(counts_data_df)
 ```
 
-We can see from our code that we do not have any duplicate expressions
-in our dataset.
+We can see from our code that we do not have any duplicate expressions in our dataset.
 
 ## B. Removing Low CPM Expressions
 
 We will be using the `edgeR` package for our CPM calculations and filtering (@edgeR)
+
 ```{r}
 library(edgeR)
 
@@ -257,34 +216,19 @@ print("This is the number of expressions remaining aftering filtering")
 nrow(filtered_counts)
 ```
 
-For our dataset we filtered out the genes that had low cpm. First we
-filtered only the expressions that had a cpm greater than 1. Then we
-further filtered it so that expressions where genes where the sum of
-expressions across the samples was less than the knockdown number which
-is the lowest numbero f replicate for a cell line, were removed.
+For our dataset we filtered out the genes that had low cpm. First we filtered only the expressions that had a cpm greater than 1. Then we further filtered it so that expressions where genes where the sum of expressions across the samples was less than the knockdown number which is the lowest numbero f replicate for a cell line, were removed.
 
-As we can see from our output above that we started out with 39373
-genes, and we had 20324 genes that did not pass our threshold leaving us
-with 19052 genes.
+As we can see from our output above that we started out with 39373 genes, and we had 20324 genes that did not pass our threshold leaving us with 19052 genes.
 
 ## C. Replicates
 
-In this experiment for each of the cell lines there were 3 replicates for the
-control and 3 replicates for the cell lines treated with CPPD, with the 
-exception of 3B1A which only had 2 replicates for each. 
+In this experiment for each of the cell lines there were 3 replicates for the control and 3 replicates for the cell lines treated with CPPD, with the exception of 3B1A which only had 2 replicates for each.
 
-In our experiment we did not remove replicates but instead treated them as
-independent. This is because this would make our expriment much richer, given 
-that we have multiple samples to analyze and becayse from our graph of data 
-pre-filtering we saw that the expression counts were not extremly similar when 
-it comes to the replicates. 
+In our experiment we did not remove replicates but instead treated them as independent. This is because this would make our expriment much richer, given that we have multiple samples to analyze and becayse from our graph of data pre-filtering we saw that the expression counts were not extremly similar when it comes to the replicates.
 
 ## D. Standardize gene names with HUGO
 
-In this section we will be mapping the gene identifiers to HUGO Symbols.
-This will allow us to standardize the gene names. We will also identify
-the number of genes that either do not have HUGO symbols and if ones do
-if there are more updated names.
+In this section we will be mapping the gene identifiers to HUGO Symbols. This will allow us to standardize the gene names. We will also identify the number of genes that either do not have HUGO symbols and if ones do if there are more updated names.
 
 ```{r}
 # Create a named vector for mapping gene numbers to gene symbols
@@ -312,13 +256,11 @@ num_rows_with_na
 
 ```
 
-We have now converted all the gene names to HGNC symbols and we saw that
-we have all the genes with their HGNC names.
+We have now converted all the gene names to HGNC symbols and we saw that we have all the genes with their HGNC names.
 
 ## E. Dataset Statistics and Distribution Plots
 
-We will now re-calculate the statistics for our dataset post filtering,
-as well as plot the graphs of the counts sample distribution.
+We will now re-calculate the statistics for our dataset post filtering, as well as plot the graphs of the counts sample distribution.
 
 ### i.Genereal Statistics
 
@@ -420,36 +362,24 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
 
 ## F. Outlier Identification
 
-From our graphs above, especially the box plot we can clearly identify
-outliers in our samples. These outliers are greatly visible and abundant
-for the samples that are treated with CDDP. Where we see many outliers
-for these samples.
+From our graphs above, especially the box plot we can clearly identify outliers in our samples. These outliers are greatly visible and abundant for the samples that are treated with CDDP. Where we see many outliers for these samples.
 
-Although we have many outliers in these samples we will not be removing
-them, this is because on analysis of the paper there does not seem to be
-any experimental issues or shortcomings described, therefore we are not
-able to conclude that the outliers are not part of the actual
-experimental data and that they are due to issues in th experimental
-procedure.
+Although we have many outliers in these samples we will not be removing them, this is because on analysis of the paper there does not seem to be any experimental issues or shortcomings described, therefore we are not able to conclude that the outliers are not part of the actual experimental data and that they are due to issues in th experimental procedure.
 
 ## G. Final Coverage
 
-We can see that after all our filtering we are left with 19052 genes from our 
-original counts data. This gives us a coverage of $34.385\%$
+We can see that after all our filtering we are left with 19052 genes from our original counts data. This gives us a coverage of $34.385\%$
 
 # 4. Normalization
 
-For this dataset we will be using the Trimmed Mean of M-values (TMM)
-method to normalize our data. This is because this method corrects for
-situations where the presence of highly expressed genes in one sample can
-disproportionately affect the overall library size, leading to misleading
-comparisons across samples (@compNormsApps)
+For this dataset we will be using the Trimmed Mean of M-values (TMM) method to normalize our data. This is because this method corrects for situations where the presence of highly expressed genes in one sample can disproportionately affect the overall library size, leading to misleading comparisons across samples (@compNormsApps)
 
 By trimming or ignoring the most extreme M-values (log-ratios of expression), TMM normalization minimizes the influence of outliers or genes with extreme expression differences (@RPubsNormStrats)
 
 ## A. TMM
-The following chunk contains the code for TMM normalization it was inspired by
-a forum from biostars (@tmmNorm)
+
+The following chunk contains the code for TMM normalization it was inspired by a forum from biostars (@tmmNorm)
+
 ```{r}
 # Store the HUGO gene Symbols
 gene_symbols <- rownames(filtered_counts_df)
@@ -470,9 +400,7 @@ head(norm_counts)
 
 ## B. Visualization
 
-1. `MDS` or Multidimension Scaling is a data analysis techinique that is used to
-represent the closeness in relationship of two objects. What it does is allow us
-to represent the similarity or disimilarity of objects in our data (@MDS). 
+1.  `MDS` or Multidimension Scaling is a data analysis techinique that is used to represent the closeness in relationship of two objects. What it does is allow us to represent the similarity or disimilarity of objects in our data (@MDS).
 
 We will be using the limma library to plot our MDS graph (@limma)
 
@@ -496,7 +424,7 @@ legend("topright",
 
 ```
 
-2. `Boxplot`
+2.  `Boxplot`
 
 ```{r, message=FALSE, warning=FALSE}
 # We take the log of the normalized counts data so that we are able to fit the
@@ -519,7 +447,7 @@ abline(h = median(apply(normalized_dataset_log, 2, median)),
        col = "blue", lwd = 0.6, lty = "dashed")
 ```
 
-3. `Density plot`
+3.  `Density plot`
 
 ```{r}
 norm_counts_den <- apply(log2(norm_counts), 2, density)
@@ -560,9 +488,7 @@ legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend bel
 
 ```
 
-
-4. `Dispersion`. This allows to describe the amount of difference between our
-mean and our variance. 
+4.  `Dispersion`. This allows to describe the amount of difference between our mean and our variance. We are displaying three types of despersion, the first is tagwise dispersion which calculates the dispersion for each gene individually, and the second is common dispersion which is a combined measure of dispersion for all the genes and the last type of dispersion is estimating gene-specific dispersion that is moderated towards a trend based on the average expression levels of genes.
 
 ```{r}
 # Create a DGEList object
@@ -582,5 +508,13 @@ edgeR::plotBCV(disp_norm_dge, col.tagwise = "black", col.common = "red", col.tre
 
 ```
 
-# 5. References
+5.  `Mean-Variance Plot`. This plot allows us to measure the change in the variance of a dataset with respect to mean. This helps us understand whether genes with higher or lower expression levels tend to be more or less variable. It also allows us to identify possible appropriate data transformation or statistical models that account for this relationship. The plot can reveal data characteristics that might need addressing, for example we often expect the variance of dataset to increase in the mean when it comes to biological data. [@MVP]
 
+```{r}
+
+edgeR::plotMeanVar(disp_norm_dge, show.raw.vars = TRUE, show.tagwise.vars=TRUE,
+            show.ave.raw.vars = TRUE, NBline=FALSE,
+            show.binned.common.disp.vars = TRUE)
+```
+
+# 5. References
