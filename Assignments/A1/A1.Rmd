@@ -1,0 +1,576 @@
+---
+title: "A1"
+author: "Mogtaba Alim"
+date: "2024-02-13"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+bibliography: references.bib
+---
+
+# The Dataset
+
+## Dataset Description [q1]
+
+The dataset that we are investigating is consolidated from a GEO (Gene
+Expression Omnibus) series
+[GSE213102](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213102).
+The title of this study is `Molecular mechanisms associated with cis-platin intrinsic resistance in early drug-tolerant persister cells of lung adenocarcinoma cell lines` [@datasetSource].
+
+Cisplatin is drug used in cancer treatment, and resistance to it is the
+primary cause for the failure of treatment in lung adenocarcinoma. The
+cause for this resistance are Drug-tolerant-perisitor (DTP) cells, which
+can survive the treatment and act as a bank for the emergence of other
+similarly resistant cells. This experiment investigates the early
+changes to the DTP cells when exposed to Cisplatin, and trys to
+establish gene expression signatures associated with the emergence of
+these cells in lung adenocarcinoma.
+
+I'm very interested in this experiment because it relates to the work I
+currently do as a researcher. Where in my lab one of the main focuses is
+pharmacogenomics, which is the study of how drugs affects cells, and
+particularly cancer cells. I am currently working on creating machine
+learning models that try and predict cancer prognosis in Non-small Cell
+Lung Cancer(NSCLC), and so understanding the root cause for the
+emergence of drug resistant cells, is very important for me.
+
+```{r, warning=FALSE, message=FALSE}
+# loading the counts dataset from GEO into a table
+geo_url <- "https://www.ncbi.nlm.nih.gov/geo/download/?format=file&type=rnaseq_counts"
+dataset_path <- paste(geo_url, "acc=GSE213102", "file=GSE213102_raw_counts_GRCh38.p13_NCBI.tsv.gz", sep="&");
+counts_data <- as.matrix(data.table::fread(dataset_path, header=T, colClasses="integer"), rownames="GeneID")
+
+# loading the gene annotations table
+annotation_path <- paste(geo_url, "type=rnaseq_counts", "file=Human.GRCh38.p13.annot.tsv.gz", sep="&")
+gene_annotations <- data.table::fread(annotation_path, header=T, quote="", stringsAsFactors=F, data.table=F)
+
+# Defining the row names for the annotations table to be the geneID's
+rownames(gene_annotations) <- gene_annotations$GeneID
+
+# The column names for the counts data the first componenet of the name is the 
+# cell line, the second is the type of experiment where CT is control and CDDP
+# is treated with Cisplatin andd the last component is the replicate number
+colnames(counts_data) <- c('A549_CT_1', 'A549_CT_2', 'A549_CT_3', 'A549_CDDP_1', 'A549_CDDP_2', 'A549_CDDP_3', 'H1299_CT_1', 'H1299_CT_2', 'H1299_CT_3', 'H1299_CDDP_1', 'H1299_CDDP_2', 'H1299_CDDP_3', 'H1573_CT_1', 'H1573_CT_2', 'H1573_CT_3', 'H1573_CDDP_1', 'H1573_CDDP_2', 'H1573_CDDP_3', '3B1A_CT_1', '3B1A_CT_3', '3B1A_CDDP_1', '3B1A_CDDP_3')
+
+# The counts data
+head(counts_data)
+
+```
+
+```{r}
+# THe annotations data
+head(gene_annotations)
+```
+
+## Explaining the Samples
+
+In the experiment there are 24 different samples
+
+In the original experiment there are 24 different samples. These samples
+consist of 4 cell lines which are A549, H1299, H1573 and 3B1A. For each
+of these cell lines the original experiment had 3 control and 3 test
+replicates. However, in the labeled data that we pulled from Geo2R there
+are only 22 samples, which is because one control and one test replicate
+each were removed for the 3B1A cell line.
+
+All cells were harvested by enzymatic treatment with a viability \>95%.
+All the cells were seeded in 96-well plates where the A549 and H1299
+cell lines had $1.2\text{x}10^4$ cells and H1573 and 3B1A cell lines had
+$5\text{x}10^4$ cells.
+
+For the test samples, the cell lines were all treated with serial
+dilutions of Cisplatin (CDDP) ranging from 5 to 160 $\mu M$ for 24
+hours.
+
+Therefore, we see that overall the quality of our samples is really
+high, with 4 different cell lines each with test and control experiments
+and each having 3 replicates, making our results easier to analyze. (@datasetSource)
+
+# Dataset Statistics and Quality
+
+In this section we will be looking at the dataset statistics. This will
+allow us to evaluate the quality of the data as well as identify any
+potential outliers. We will be using the `dplyr` package (@dplyr)
+
+```{r}
+library(dplyr)
+
+counts_data_df <- as.data.frame(counts_data)
+
+# Initialize an empty list to store statistics for each sample
+stats_list <- list()
+
+# Iterate over each sample in the counts_data_df
+for (sample_name in colnames(counts_data_df)) {
+  sample_data <- counts_data_df[[sample_name]]
+  
+  # Compute statistics for the sample
+  total_counts <- sum(sample_data)
+  mean_counts <- mean(sample_data)
+  median_counts <- median(sample_data)
+  sd_counts <- sd(sample_data)
+  var_counts <- var(sample_data)
+  genes_detected <- sum(sample_data > 1)
+  
+  # Store the statistics in the list
+  stats_list[[sample_name]] <- c(total_counts, mean_counts, median_counts, sd_counts, var_counts, genes_detected)
+}
+
+# Convert the list of statistics into a data frame
+# Each element of the list becomes a row in the new data frame
+basic_stats_df <- do.call(rbind, stats_list)
+rownames(basic_stats_df) <- names(stats_list)
+colnames(basic_stats_df) <- c("Total Counts", "Mean Counts", "Median Counts", "SD Counts", "Variance", "Genes Detected")
+
+
+```
+
+```{r}
+basic_stats_df
+```
+
+Now that we have seen the basic stats for different samples we will be
+visualizing our data. 1. A `Boxplot` which will allow us to show the
+distribution of expression levels for each sample, highlighting the
+median, interquartile range, and potential outliers.
+
+```{r, message=FALSE}
+
+# We take the log of the counts data so that we are able to fit the data in the 
+# Box plot
+dataset_log <- log2(counts_data)
+
+# Plotting our boxplot
+# The xlab and ylab are empty because by default they are too small
+boxplot(dataset_log, xlab = "", ylab = "",
+        las = 2, cex = 0.5, cex.lab = 0.5,
+        cex.axis = 0.5, main = "RNASeq Samples")
+
+# We manually add our x and y axis labels to ensure that they are positioned
+# correctly in the plot and are visible
+title(xlab = "Cell Line Replicates", line = 4)
+title(ylab = "log2 TPM")
+
+# The below code draws the median line on the boxplot
+abline(h = median(apply(dataset_log, 2, median)),
+       col = "blue", lwd = 0.6, lty = "dashed")
+
+```
+
+2.  A `density plot` will provide a smooth estimate of the distribution
+    of expression levels across all samples, useful for comparing the
+    overall shape of distributions.
+
+```{r}
+dataset_counts_den <- apply(log2(counts_data), 2, density)
+
+# We calculate the max and minimum across all our sample replicates
+xmax <- 0; ymax <- 0
+for (i in 1:length(dataset_counts_den)) {
+    xmax <- range(c(xmax, dataset_counts_den[[i]]$x))
+    ymax <- range(c(ymax, dataset_counts_den[[i]]$y))
+}
+
+column_vals <- rainbow(length(dataset_counts_den))
+lty_vals <- rep(1, length(dataset_counts_den))
+
+# We first initialize our density plot by plotting the first density plot
+plot(dataset_counts_den[[1]], xlim=xmax, ylim=ymax, type="n",
+     ylab="Smoothing density of log2-CPM", main="", cex.lab = 0.85)
+
+# Then we ensure that each line is plotted
+for (i in 1:length(dataset_counts_den)) {
+    lines(dataset_counts_den[[i]], col=column_vals[i], lty=lty_vals[i])
+}
+
+# Lastly we create our legend
+# We had to modify our legend a lot from standard because
+# we have 22 samples and onlny 17 of them would fit.
+
+# Increase the bottom margin to make space for the legend
+par(mar=c(8, 4, 4, 2) + 0.1, xpd=TRUE)
+
+# Create the legend at the bottom of the plot
+legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend below the plot
+       legend = colnames(dataset_log), col = column_vals, lty = lty_vals, cex = 0.5,
+       border = "blue", text.col = "green4",
+       merge = TRUE, bg = "gray90", ncol = 3)  
+
+
+
+```
+
+We see that we start with 39376 values in our dataset pre-filtering.
+This number is a further reduction from the original 58786 that was in
+the original dataset that had no gene identifiers. The current number of
+39376 is the number of genes that were used in the analysis on Geo2R. \#
+Filtering the Dataset In this section we will be filtering the dataset.
+This includes identifying duplicate expressions, removing expressions
+with low counts per million (cpm) and finally ensuring that all gene
+names are HGNC compliant.
+
+## Duplicate Identification
+
+```{r}
+# Find the duplicate row names
+dup_rows <- rownames(counts_data_df)[duplicated(rownames(counts_data_df))]
+
+# Remove rows with duplicate names
+counts_data_unique <- counts_data_df[!rownames(counts_data_df) %in% dup_rows, ]
+
+print("The number of duplicate rows:")
+length(counts_data_unique) - length(counts_data_df)
+```
+
+We can see from our code that we do not have any duplicate expressions
+in our dataset.
+
+## Removing Low CPM Expressions
+
+We will be using the `edgeR` package for our CPM calculations and filtering (@edgeR)
+```{r}
+library(edgeR)
+
+# The knockdown value which represents the replicate number for the condition
+# with the lowest number of replicates
+kd_val = 2
+
+# We use our dataset to calculate the CPM
+dataset_cpm <- edgeR::cpm(counts_data)
+
+# Identify the rows that pass our threshold 
+pass_thold <- rowSums(dataset_cpm > 1) >= kd_val
+
+# Create a new dataset of counts after expressions with low cpm are removed
+filtered_counts <- counts_data[pass_thold,]
+
+print("These are the number of expressions that did not pass our threshold for CPM")
+nrow(counts_data) - nrow(filtered_counts)
+
+print("This is the number of expressions remaining aftering filtering")
+nrow(filtered_counts)
+```
+
+For our dataset we filtered out the genes that had low cpm. First we
+filtered only the expressions that had a cpm greater than 1. Then we
+further filtered it so that expressions where genes where the sum of
+expressions across the samples was less than the knockdown number which
+is the lowest numbero f replicate for a cell line, were removed.
+
+As we can see from our output above that we started out with 39373
+genes, and we had 20324 genes that did not pass our threshold leaving us
+with 19052 genes.
+
+## Replicates
+
+In this experiment for each of the cell lines there were 3 replicates for the
+control and 3 replicates for the cell lines treated with CPPD, with the 
+exception of 3B1A which only had 2 replicates for each. 
+
+In our experiment we did not remove replicates but instead treated them as
+independent. This is because this would make our expriment much richer, given 
+that we have multiple samples to analyze and becayse from our graph of data 
+pre-filtering we saw that the expression counts were not extremly similar when 
+it comes to the replicates. 
+
+## Standardize gene names with HUGO
+
+In this section we will be mapping the gene identifiers to HUGO Symbols.
+This will allow us to standardize the gene names. We will also identify
+the number of genes that either do not have HUGO symbols and if ones do
+if there are more updated names.
+
+```{r}
+# Create a named vector for mapping gene numbers to gene symbols
+gene_to_symbol <- gene_annotations$Symbol
+names(gene_to_symbol) <- gene_annotations$GeneID
+
+# Replace the row names in filtered_counts with the corresponding gene symbols
+# 'match' function is used to find the index of the gene numbers in the named vector
+rownames(filtered_counts) <- gene_to_symbol[match(rownames(filtered_counts), names(gene_to_symbol))]
+
+# If there are gene numbers that don't have a corresponding symbol, they will be replaced with NA.
+missing_symbols <- is.na(rownames(filtered_counts))
+rownames(filtered_counts)[missing_symbols] <- names(missing_symbols)[missing_symbols]
+
+head(filtered_counts)
+
+```
+
+```{r}
+# Count the number of rows with NA as the row name
+num_rows_with_na <- sum(is.na(rownames(filtered_counts)))
+
+# Output the number
+num_rows_with_na
+
+```
+
+We have now converted all the gene names to HGNC symbols and we saw that
+we have all the genes with their HGNC names.
+
+## Dataset Statistics and Distribution Plots
+
+We will now re-calculate the statistics for our dataset post filtering,
+as well as plot the graphs of the counts sample distribution.
+
+### Genereal Statistics
+
+```{r}
+filtered_counts_df <- as.data.frame(filtered_counts)
+
+# Initialize an empty list to store statistics for each sample
+filtered_stats_list <- list()
+
+# Iterate over each sample in the filtered_counts_df
+for (sample_name in colnames(filtered_counts_df)) {
+  sample_data <- filtered_counts_df[[sample_name]]
+  
+  # Compute statistics for the sample
+  total_counts <- sum(sample_data)
+  mean_counts <- mean(sample_data)
+  median_counts <- median(sample_data)
+  sd_counts <- sd(sample_data)
+  var_counts <- var(sample_data)
+  genes_detected <- sum(sample_data > 1)
+  
+  # Store the statistics in the list
+  filtered_stats_list[[sample_name]] <- c(total_counts, mean_counts, median_counts, sd_counts, var_counts, genes_detected)
+}
+
+# Convert the list of statistics into a data frame
+# Each element of the list becomes a row in the new data frame
+filtered_stats_df <- do.call(rbind, filtered_stats_list)
+rownames(filtered_stats_df) <- names(filtered_stats_list)
+colnames(filtered_stats_df) <- c("Total Counts", "Mean Counts", "Median Counts", "SD Counts", "Variance", "Genes Detected")
+
+filtered_stats_df
+
+```
+
+### Distribution Plots
+
+1.  `Boxplot`
+
+```{r, message=FALSE, warning=FALSE}
+# We take the log of the filtered counts data so that we are able to fit the
+# data in the Box plot
+filtered_dataset_log <- log2(filtered_counts_df)
+
+# Plotting our boxplot
+# The xlab and ylab are empty because by default they are too small
+boxplot(filtered_dataset_log, xlab = "", ylab = "",
+        las = 2, cex = 0.5, cex.lab = 0.5,
+        cex.axis = 0.5, main = "RNASeq Samples")
+
+# We manually add our x and y axis labels to ensure that they are positioned
+# correctly in the plot and are visible
+title(xlab = "Cell Line Replicates", line = 4)
+title(ylab = "log2 TPM")
+
+# The below code draws the median line on the boxplot
+abline(h = median(apply(filtered_dataset_log, 2, median)),
+       col = "blue", lwd = 0.6, lty = "dashed")
+```
+
+2.  `Density Plot`
+
+```{r, message=FALSE, warning=FALSE}
+
+filtered_counts_den <- apply(log2(filtered_counts_df), 2, density)
+
+# We calculate the max and minimum across all our sample reolicates
+xmax <- 0; ymax <- 0
+for (i in 1:length(filtered_counts_den)) {
+    xmax <- range(c(xmax, filtered_counts_den[[i]]$x))
+    ymax <- range(c(ymax, filtered_counts_den[[i]]$y))
+}
+
+column_vals <- rainbow(length(filtered_counts_den))
+lty_vals <- rep(1, length(filtered_counts_den))
+
+# We first initialize our density plot by plotting the first density plot
+plot(filtered_counts_den[[1]], xlim=xmax, ylim=ymax, type="n",
+     ylab="Smoothing density of log2-CPM", main="", cex.lab = 0.85)
+
+# Then we ensure that each line is plotted
+for (i in 1:length(filtered_counts_den)) {
+    lines(filtered_counts_den[[i]], col=column_vals[i], lty=lty_vals[i])
+}
+
+# Lastly we create our legend
+# We had to modify our legend a lot from standard because
+# we have 22 samples and onlny 17 of them would fit.
+
+# Increase the bottom margin to make space for the legend
+par(mar=c(8, 4, 4, 2) + 0.1, xpd=TRUE)
+
+# Create the legend at the bottom of the plot
+legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend below the plot
+       legend = colnames(filtered_dataset_log), col = column_vals, lty = lty_vals, cex = 0.5,
+       border = "blue", text.col = "green4",
+       merge = TRUE, bg = "gray90", ncol = 3)  
+```
+
+## Outlier Identification
+
+From our graphs above, especially the box plot we can clearly identify
+outliers in our samples. These outliers are greatly visible and abundant
+for the samples that are treated with CDDP. Where we see many outliers
+for these samples.
+
+Although we have many outliers in these samples we will not be removing
+them, this is because on analysis of the paper there does not seem to be
+any experimental issues or shortcomings described, therefore we are not
+able to conclude that the outliers are not part of the actual
+experimental data and that they are due to issues in th experimental
+procedure.
+
+## Final Coverage
+
+We can see that after all our filtering we are left with 19052 genes from our 
+original counts data. This gives us a coverage of $34.385\%$
+
+# Normalization
+
+For this dataset we will be using the Trimmed Mean of M-values (TMM)
+method to normalize our data. This is because this method corrects for
+situations where the presence of highly expressed genes in one sample can
+disproportionately affect the overall library size, leading to misleading
+comparisons across samples (@compNormsApps)
+
+By trimming or ignoring the most extreme M-values (log-ratios of expression), TMM normalization minimizes the influence of outliers or genes with extreme expression differences (@RPubsNormStrats)
+
+## TMM
+The following chunk contains the code for TMM normalization it was inspired by
+a forum from biostars (@tmmNorm)
+```{r}
+# Store the HUGO gene Symbols
+gene_symbols <- rownames(filtered_counts_df)
+
+# Create a DGEList object
+dge <- edgeR::DGEList(counts = filtered_counts_df, genes = gene_symbols)
+
+# Calculate the normalization factors using the TMM
+dge <- edgeR::calcNormFactors(dge, method = "TMM")
+
+# Compute normalized counts
+norm_counts <- edgeR::cpm(dge, log = FALSE)
+
+head(norm_counts)
+
+
+```
+
+## Visualization
+
+1. `MDS` or Multidimension Scaling is a data analysis techinique that is used to
+represent the closeness in relationship of two objects. What it does is allow us
+to represent the similarity or disimilarity of objects in our data (@MDS). 
+
+We will be using the limma library to plot our MDS graph (@limma)
+
+```{r}
+
+library(limma)
+
+# We create a gradient rainbow vector for the column names
+col_vector <- rainbow(ncol(dge))
+
+# We plot the MDS
+limma::plotMDS(dge, labels=NULL, pch = 1,
+               col = col_vector[factor(colnames(dge))])
+
+# We create the legend and divide it into 4 columns as the number of samples
+# is too big
+legend("topright",
+       legend=levels(factor(colnames(dge))),
+       pch=c(1), col= col_vector,title="Class",
+       bty = 'n', cex = 0.5, ncol = 4)
+
+```
+
+2. `Boxplot`
+
+```{r, message=FALSE, warning=FALSE}
+# We take the log of the normalized counts data so that we are able to fit the
+# data in the Box plot
+normalized_dataset_log <- log2(norm_counts)
+
+# Plotting our boxplot
+# The xlab and ylab are empty because by default they are too small
+boxplot(normalized_dataset_log, xlab = "", ylab = "",
+        las = 2, cex = 0.5, cex.lab = 0.5,
+        cex.axis = 0.5, main = "RNASeq Samples")
+
+# We manually add our x and y axis labels to ensure that they are positioned
+# correctly in the plot and are visible
+title(xlab = "Cell Line Replicates", line = 4)
+title(ylab = "Normalized log2 TPM")
+
+# The below code draws the median line on the boxplot
+abline(h = median(apply(normalized_dataset_log, 2, median)),
+       col = "blue", lwd = 0.6, lty = "dashed")
+```
+
+3. `Density plot`
+
+```{r}
+norm_counts_den <- apply(log2(norm_counts), 2, density)
+
+# We calculate the max and minimum across all our sample reolicates
+xmax <- 0; ymax <- 0
+for (i in 1:length(norm_counts_den)) {
+    xmax <- range(c(xmax, norm_counts_den[[i]]$x))
+    ymax <- range(c(ymax, norm_counts_den[[i]]$y))
+}
+
+column_vals <- rainbow(length(norm_counts_den))
+lty_vals <- rep(1, length(norm_counts_den))
+
+# We first initialize our density plot by plotting the first density plot
+plot(norm_counts_den[[1]], xlim=xmax, ylim=ymax, type="n",
+     ylab="Smoothing density of log2-CPM", main="", cex.lab = 0.85)
+
+# Then we ensure that each line is plotted
+for (i in 1:length(norm_counts_den)) {
+    lines(norm_counts_den[[i]], col=column_vals[i], lty=lty_vals[i])
+}
+
+# Lastly we create our legend
+# We had to modify our legend a lot from standard because
+# we have 22 samples and onlny 17 of them would fit.
+
+# Increase the bottom margin to make space for the legend
+par(mar=c(8, 4, 4, 2) + 0.1, xpd=TRUE)
+
+# Create the legend at the bottom of the plot
+legend("topright", inset=c(-0.05, 0),  # Adjust the inset to move the legend below the plot
+       legend = colnames(normalized_dataset_log), col = column_vals, lty = lty_vals, cex = 0.5,
+       border = "blue", text.col = "green4",
+       merge = TRUE, bg = "gray90", ncol = 3)  
+
+
+
+```
+4. `Dispersion`. This allows to describe the amount of difference between our
+mean and our variance. 
+
+```{r}
+# Create a DGEList object
+disp_norm_dge <- edgeR::DGEList(counts = norm_counts, genes = gene_symbols)
+
+disp_norm_dge <- edgeR::estimateCommonDisp(disp_norm_dge)
+
+disp_norm_dge <- edgeR::estimateTagwiseDisp(disp_norm_dge)
+
+disp_norm_dge <- edgeR::estimateTrendedDisp(disp_norm_dge)
+
+edgeR::plotBCV(disp_norm_dge, col.tagwise = "black", col.common = "red", col.trend = "blue")
+
+
+```
+
+# References
+
