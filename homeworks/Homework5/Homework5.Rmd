@@ -1,0 +1,91 @@
+---
+title: "Homework5"
+output: html_document
+---
+
+# Load Required Files
+```{r}
+#install required R and bioconductor packages
+tryCatch(expr = { library("RCurl")}, 
+         error = function(e) {  
+           install.packages("RCurl")}, 
+         finally = library("RCurl"))
+```
+
+
+# Set parameters
+```{r}
+
+#path to GSEA jar 
+gsea_jar <- "~/projects/code/Mogtaba_Alim/data_files/GSEA_4.3.3/gsea-cli.sh"
+
+```
+
+```{r}
+
+#directory where all the data files are found.  For example -   ./data/ 
+working_dir <- "~/projects/code/Mogtaba_Alim/data_files/"
+
+#directory where all the data files are found.  For example -   ./generated_data/gsea/
+output_dir <- "~/projects/code/Mogtaba_Alim/processed_data"
+
+#The name to give the analysis in GSEA - for example Mesen_vs_Immuno
+analysis_name <- "Mesen_vs_Immuno"
+
+#rank file to use in GSEA analysis.  
+#For example - MesenchymalvsImmunoreactive_edger_ranks.rnk
+rnk_file <- "MesenvsImmuno_RNASeq_ranks.rnk"
+
+#run_gsea - true/false
+# This parameter is for the compilation of the notebook.  
+run_gsea <- TRUE
+
+#set the gmt file you want to use if you don't want to use the latest gmt file.
+# For example, if you set dest_gmt_file =="" the below script will automatically
+# download the latest gmt file from baderlab webstie.  If it is set then it
+# will use the file specified.  
+dest_gmt_file = file.path(output_dir, 
+                          "Human_GOBP_AllPathways_noPFOCR_no_GO_iea_April_01_2024_symbol.gmt")
+
+
+
+```
+
+# Run GSEA
+
+```{r}
+
+if(run_gsea){
+  command <- paste("",gsea_jar,  
+                   "GSEAPreRanked -gmx", dest_gmt_file, 
+                   "-rnk" ,file.path(working_dir,rnk_file), 
+                   "-collapse false -nperm 1000 -scoring_scheme weighted", 
+                   "-rpt_label ",analysis_name,
+                   "  -plot_top_x 20 -rnd_seed 12345  -set_max 200",  
+                   " -set_min 15 -zip_report false ",
+                   " -out" ,output_dir, 
+                   " > gsea_output.txt",sep=" ")
+  system(command)
+}
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
