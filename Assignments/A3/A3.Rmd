@@ -111,7 +111,6 @@ Following the completion of our analysis the following were the top pathway hits
 
 **Figure 6.** These tables above showcases the top 10 pathway hits for the gene expression analysis experiment for the complete list of differentially expressed genes, the upregulated genes, and the downregulated genes respectively.
 
-
 # 2. Introduction
 
 Our current study extends the groundwork laid in Assignments #1 and #2, where we performed normalization and scoring on genomic data obtained from the Gene Expression Omnibus (GEO) with the specific identifier X. This initial phase involved rigorous data preprocessing, normalization to minimize technical variability, and scoring to highlight genes of interest based on their differential expression levels. Basic statistical analyses provided a ranked list of genes, setting the stage for a more nuanced exploration of biological pathways involved.
@@ -226,7 +225,9 @@ sampleMetadata <- as.data.frame(sampleMetadata)
 ```
 
 ### iv. Normalization
-Normalization is done using the Trimmed Mean of M method[@tmmNorm] 
+
+Normalization is done using the Trimmed Mean of M method[@tmmNorm]
+
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 # Store the HUGO gene Symbols
 gene_symbols <- rownames(filtered_counts_df)
@@ -243,6 +244,7 @@ norm_counts <- edgeR::cpm(dge, log = FALSE)
 ```
 
 ### v. Data Restriction
+
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(dplyr)
 
@@ -254,6 +256,19 @@ H1573_counts <- filtered_counts_df %>% select(contains("H1573"))
 # H1573 cell line
 H1573_norm_counts <- as.data.frame(norm_counts) %>% select(contains("H1573"))
 
+
+```
+
+```{r}
+
+H1573_norm_counts_holder <- H1573_norm_counts
+
+H1573_norm_counts_holder$Name <- row.names(H1573_norm_counts_holder)
+
+write.table(H1573_norm_counts_holder, file="data/H1573_norm_counts.txt", sep=",", 
+            row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+remove(H1573_norm_counts_holder)
 
 ```
 
@@ -271,7 +286,6 @@ sample_metadata_H1357 <- sampleMetadata[rows_with_H1357, ]
 design_model_treatment <- model.matrix(~ sample_metadata_H1357$treatment )
 
 ```
-
 
 ## C. Differential Gene Expression
 
@@ -311,7 +325,7 @@ qlf_H1573_output_hits <- topTags(qlf.treatment_vs_control,
 
 # 4. Non-Thresholded Gene Set Differential Expression
 
-## A. Creating Gene Rank File H1573 Cell Line Cisplatin vs Control 
+## A. Creating Gene Rank File H1573 Cell Line Cisplatin vs Control
 
 ```{r, warning=FALSE, message=FALSE}
 # First, we calculate the ranking metric
@@ -337,12 +351,14 @@ write.table(final_ranked_genes, file="data/H1573_Cisplatin_vs_Control_RNASeq_ran
             row.names=FALSE, col.names=TRUE, quote=FALSE)
 ```
 
-This is the genes with the most positive rank, meaning the most up regulated genes. 
+This is the genes with the most positive rank, meaning the most up regulated genes.
+
 ```{r, warning=FALSE, message=FALSE, }
 head(final_ranked_genes$table)
 ```
 
-This is the genes with the most negative rank, meaning the most down regulated genes. 
+This is the genes with the most negative rank, meaning the most down regulated genes.
+
 ```{r, warning=FALSE, message=FALSE}
 tail(final_ranked_genes$table)
 ```
@@ -351,11 +367,12 @@ tail(final_ranked_genes$table)
 
 For this experiment we will be using the GSEA software by (@GSEA1) and (@GSEA2). The GSEA software which is provided by the Broad Institute and UC San Diego, is considered a top-tier tool for Non-Thresholded Gene Set Differential Expression because it integrates a comprehensive and curated collection of gene sets and offers robust statistical frameworks. Unlike other methods that may rely on arbitrary cutoffs for gene selection, this version of GSEA utilizes the entire gene expression profile, preserving subtle yet meaningful biological variations within gene sets. The support of a rich database for gene set annotations further enhances the interpretability of the results, making it a great choice for this project as are aiming for depth and precision in understanding gene expression patterns and their impact on biological processes.
 
-For this experiment we selected the Human gene sets from the Bader lab. The gene set that we will be using contains only genesets from GO biological process excluding annotations that have evidence code IEA (inferred from electronic annotation), ND (no biological data available), and RCA (inferred from reviewed computational analysis) and all pathway resources. Furthermore, this geneset is updated monthly, and comes with 3 different types of gene identifiers, Entrez gene ids, UniProt accessions, and HGNC gene symbols. Overall this gives us excellent source of gene sets, that is both regularly updated and is standardized to ensure the latest gene set information, and standards are met.
+For this experiment we selected the Human gene sets from the Bader lab (@EnrichmentMap). The gene set that we will be using contains only genesets from GO biological process excluding annotations that have evidence code IEA (inferred from electronic annotation), ND (no biological data available), and RCA (inferred from reviewed computational analysis) and all pathway resources. Furthermore, this geneset is updated monthly, and comes with 3 different types of gene identifiers, Entrez gene ids, UniProt accessions, and HGNC gene symbols. Overall this gives us excellent source of gene sets, that is both regularly updated and is standardized to ensure the latest gene set information, and standards are met.
 
 ### i. Downloading the Gene Set and GSEA
 
-Downloading the gene set from teh Bader lab. 
+Downloading the gene set from the Bader lab.
+
 ```{r, warning=FALSE, message=FALSE}
 # Define the URL of the gene set file
 geneset_url <- "http://download.baderlab.org/EM_Genesets/current_release/Human/symbol/Human_GOBP_AllPathways_noPFOCR_no_GO_iea_April_01_2024_symbol.gmt"
@@ -384,6 +401,7 @@ if (file.exists(output_file_path)) {
 ```
 
 Downloading GSEA
+
 ```{r, warning=FALSE, message=FALSE}
 # data_dir <- "data"
 # gsea_dir_name <- "GSEA_4.3.3"
@@ -429,7 +447,8 @@ Downloading GSEA
 
 ### ii. Load Required Files
 
-In this step we make sure that all the packages and R files required for our GSEA analysis are downloaded and exist. 
+In this step we make sure that all the packages and R files required for our GSEA analysis are downloaded and exist.
+
 ```{r, warning=FALSE, message=FALSE}
 #install required R and bioconductor packages
 tryCatch(expr = { library("RCurl")}, 
@@ -438,10 +457,10 @@ tryCatch(expr = { library("RCurl")},
          finally = library("RCurl"))
 ```
 
-
 ### iii. Define Parameters
 
-In this step we define all the parameters needed to run our GSEA. This includes the Jar file from which we will run the command line script, the gene set file, the ranked genes file, and finally other parameters required to run GSEA. 
+In this step we define all the parameters needed to run our GSEA. This includes the Jar file from which we will run the command line script, the gene set file, the ranked genes file, and finally other parameters required to run GSEA.
+
 ```{r, warning=FALSE, message=FALSE}
 
 #path to GSEA jar 
@@ -488,6 +507,133 @@ if(run_gsea){
 }
 ```
 
+## C. Result Analysis and Vizualization
+
+# 5. Visualization of Gene set Enrichment Analysis
+
+To visualize the output of gene enrichment analysis we will be using Enrichment Map from Cytoscape (@Cytoscape).
+
+Enrichment Map (@EnrichmentMap) is a powerful visualization tool provided by Cytoscape, designed specifically for the graphical representation of gene set enrichment results. This approach allows us to visually explore the relationships between gene sets, facilitating a deeper understanding of the biological pathways involved in their dataset. The core advantage of Enrichment Map lies in its ability to organize and display complex enrichment analysis outcomes in a network format, where nodes represent enriched gene sets and edges indicate shared genes between these sets, thus highlighting functional connections.
+
+This method of visualization offers several benefits: it simplifies the interpretation of gene set enrichment analysis (GSEA) results, supports the identification of functionally related gene sets, and promotes the discovery of underlying biological themes within the data. By transforming the results of enrichment analyses into intuitive, visually-appealing networks, Enrichment Map enables us to more effectively communicate our results, especially when we come to compare multiple pathways and biological processes.
+
+## A. Default Parameters
+
+To start with, I first created my network using the default parameters. These parameters were as following:
+
+-   **FDR q-value cutoff:** 0.1
+-   **p-value cutoff:** 1.0
+-   **NES** All
+-   **Gene-set similarity filtering:**
+    -   **Data Set Edges:** Automatic
+    -   **Cutoff:** 0.375
+    -   **Metric:** Jaccard+Overlap Combined (50%-50%)
+
+This is the visualization of my network. 
+<img src="./Figures/EM_Default.png"/>
+
+**Figure 7.** The graph above showcases the enrchichment map network, using the default parameters that come with the application on Cytoscape. It is very clear that the output is not very meaningful in the context of our data. 
+
+From the network graph seen in **Figure 7.**, we can see the enrichment map output for our differential expression analysis using the default parameters. From the network it is very clear that the default parameters do not provide us with a great enrichment map, and the output network is not very informative. Furthermore, it is clear that these default parameters are too broad, allowing for genesets, that are not significant to out experiment to be included as well. 
+
+This can also be seen from the size of the network, where using the default parameters we got a network of 2072 nodes, meaning that many genesets, and 6321 edges. 
+
+## B. Restricted Thresholds
+
+In order for us to obtain more meanigful results and to be able to showcase only the genesets of most significance, we modified the default thresholds that were provided by Cytoscape. We kept the Gene-set similarity giltering section the same, to maintain consistency of the networks as well as the density of the network and we focused on the qualitative values which were the q-value and p-value. 
+
+After many manipulations and iterations the number that we chose was the same maintained for the p-value, as it did not affect the graph very greatly, and instead focused on the q-value. In the end we chose a q-value of 0.005. This is because that is the value that we found to provide us with only the gene sets that significantly contributed, and it also matches our previous q-value definitions that provided us with significant results. We also used a sparser Edge Cutoff.  
+
+These were our thresholds:
+
+-   **FDR q-value cutoff:** 0.005
+-   **p-value cutoff:** 1.0
+-   **NES** All
+-   **Gene-set similarity filtering:**
+    -   **Data Set Edges:** Automatic
+    -   **Cutoff:** 0.675
+    -   **Metric:** Jaccard+Overlap Combined (50%-50%)
+
+This was the output graph:
+
+This is the visualization of my network. 
+<img src="./Figures/EM_Thresholded_Before_Annotation.png"/>
+
+**Figure 8.** The graph above showcases the enrchichment map network, using the modified threshold parameters that we selected. It is very clear that the output is much more meaningful in the context of our data, compared to the default parameters, and provides a more detailed and significant mapping. 
+
+This was a much better cut-off, and it provided us with a much more informative mapping. This left us with 85 total nodes, and 224 edges. 
+
+Furthermore, we can see that following the threshold change, the demographic our enrichment map is changed. Firstly, our map now has significantly more gene sets with positive scores compared to negative scores. Furthermore, we see that the negatively scored gene sets all cluster together, while the positively scored gene sets form many separate groups. 
+
+
+## C. Annotating Enrichment Network
+
+When it come sto enrichment map networks, annoation serves as a critical step for making the visual data more interpretable and informative. By labeling clusters within the network with relevant biological terms or functional categories, annotation provides clarity on the biological processes or pathways that are represented by groups of interconnected gene sets. This enhances our understanding of the data by linking abstract network patterns to concrete biological concepts, allowing us to recognize functional themes and to easily communicate results. The added layer of information facilitates our identification of key biological mechanisms underlying the data, such as shared molecular functions, biological processes, or cellular components involved in the condition being studied.
+
+The `AutoAnnotate` (@AutoAnnotate) package within Cytoscape automates this process by using advanced algorithms to detect clusters within the network and assign descriptive labels to them. It works by summarizing the network's structure and the enrichment results into concise, descriptive terms. This tool is particularly useful as it can help us process the networks efficiently, save time and reduce the potential errors compared to manual annotation.
+
+AutoAnnotate not only streamlines the workflow but also allows us to customize the annotation process, giving us control over the visual aspects and the detail level of the annotations, thus tailoring the network to specific needs.
+
+For this annotation we used AutoAnnotate's clusterMaker app. With it we chose the following parameters for annotation:
+
+-   **Cluster Options:**
+    -   **Cluster Alogrithm:** MCL CLuster
+    -   **Edge Weight Column:** Similarity Coefficient
+-   **Label Options:**
+    -   **Label Column:** GS_DESCR
+    -   **Label Algorithm:** WordCloud: Adjacent Words
+    -   **Max Words per Label:** 3
+    -   **Minimum Word Occurrence:** 1
+    -   **Adjacent Bonus:** 8
+
+
+This is out annotated map:
+
+<img src="./Figures/EM_Annotated.png"/>
+
+**Figure 8.** The graph above showcases the annotated enrichment map network. It is abundantly clear that the majority of clusters are of positvely scored gene sets. 
+
+Following our annotation of our enrichment map, we see our output map in **Figure 8.**. This annotation provided us with some interesting insights. Firstly, our annotated map has 12 annotated clusters. Of the 12 only 1 of the clusters is of negatively scored gene sets, with the other 11 being positively scored gene sets. However, even though more of the clusters are of positively scored sets, we see that the negatively scored gene sets all cluster very close together meaning that most of the negatively scored gene sets have similar function, while the positively scored gene sets are more diverse int heir function. 
+
+## C. Theme Network
+
+In the next step we will be collapsing our enrichment map into a theme network. 
+
+This process involves taking the individual gene sets within our enrichment network are consolidated into broader themes or categories that represent the underlying biological processes. This is often done by grouping together gene sets that share many genes in common or are functionally related, reducing the complexity of the network and making it easier to visualize and interpret the overall structure of the data.
+
+The main reason for creating a theme network is to synthesize and streamline the results of a detailed enrichment analysis, distilling large amounts of data into a more digestible form. This helps us in identifying overarching biological themes or pathways that are enriched across different gene sets. By focusing on higher-level themes rather than individual gene sets, we can better understand the biological 'big picture' and how the different elements of the network relate to each other within this broader context.
+
+Collapsing to a theme network can enhance our ability to detect major themes and patterns that align with the biological model being tested. It also allows us to quickly ascertain whether the observed enrichment supports the expected biological pathways and processes or if there are unexpected findings. By abstracting the data to this level, it becomes easier for us communicate findings to a wider audience, including those who may not be specialists in the field.
+
+After collapsing our enrichment map into it's corresponding theme map. This our output:
+
+<img src="./Figures/EM_Theme_Map.png"/>
+
+**Figure 9.** The graph above showcases the collapsed theme network of our enrichment map. It is is showing us the major themes and patterns that appear across our gene sets.
+
+
+From our collapsed theme network seen in **Figure 9.**, we can see that we have some very prominent themes with many involved gene sets. For the negative gene sets we have only 1 theme called `synthesis valine protein` which is the exact thing as we saw in our annotated enrichment map. For the positive gene sets we had a few prominent themes, with the most prominent four being, `negative chemotaxis cell`, `transforming growth factor`, `cycle roha gtpase` and `negative canonical wnt`. From the outputs for our themes we can clearly see that they they fit our annotated model very well, where almost all the themes present are the exact name of the clusters we had in our annotated enrichment map. From our analysis we can see that most of the theme that are most enriched relate to cancer growth and development, which is what the focus of this study is. 
+
+
+# 6. Result interpretation and Post-analysis
+
+In this section we will be evaluating our results and analyzing them further. The point of this is for us to relate our results not only to the output of the Thresholded Over Representation Analysis that we did in assignment 2, but to also see if our results concur with the findings of the original publication. This will allow us to see if our initial study questions were meaningfully addressed and if so how and if not why. 
+
+## A. Gene Set Expression Analyis Comparison to Orignal Paper and A2
+
+In the original paper, the study reported transcriptional signature of early cisplatin drug-tolerant persister cells (DTPs) in lung adenocarcinoma. 
+
+From our gene set expression analysis, it's clear that a vast array of protein synthesis pathways—specifically those for various amino acids were among the most negatively impacted. This suggests a general downregulation of protein synthesis mechanisms, possibly reflecting a response to cisplatin-induced stress, where the cell aims to conserve resources by limiting anabolic processes, which also could be evidence of another mechanisim of the effectiveness of Cisplatin, as increased amino acid metablosim is a large contributer to cance growth (@AminoAcidDeath). In contrast, the positive enrichment of pathways like "RUNX2 REGULATES BONE DEVELOPMENT" (@Runx2) and "NOTCH SIGNALING" (@notch) in our analysis indicates a level of cellular adaptation towards survival pathways, which might be a characteristic of DTP cells as they strive to circumvent the cytotoxic effects of the drug. These results can be seen as very clear evidence of the effect of Cisplatin on cell survivial, however, the evidence of cellular adaptation towards survival pathways could be an indication of potential attempts at resistance to Cisplatin seen in the cells. Furthermore, one the most highly negatively regulated gene sets, was the "SARCOMERE ORGANIZATION" pathway, which is inline with the expected behaviour of succesful chemotheraputic drugs(@chemotheraputic). Moreover, we saw novel pathways such as the "SENSORY PERCEPTION OF TASTE" pathway, which was not discussed in the original paper, however, we found it to be significantly negatively regulated. This was very in line with previous findings, where chemotherapeutic drugs have been found to have a significant effect on taste, with over 77% of patients in studies reporting this (@taste) .
+
+The enrichment of NOTCH signaling and pathways related to the cell cycle in our positively regulated gene sets echoes the original paper's observations of DTP cells deregulating metabolic and proliferative pathways. The presence of "RUNX2 REGULATES OSTEOBLAST DIFFERENTIATION" also suggests a role in cell differentiation that may be relevant to DTP cell survival or the acquisition of a more resistant phenotype. Moreover, the "HALLMARK_UV_RESPONSE_DN" among negatively regulated sets could indicate a transcriptional response to DNA damage (@Hallmark), consistent with cisplatin's mode of action (@CisplatinAction).
+
+ or known in the context of cisplatin response, they could represent new areas of interest. It's worth considering how alterations in these seemingly unrelated pathways could relate to cellular stress responses or metabolic changes in DTP cells.
+
+
+
+
+
+
 ```{r, warning=FALSE, message=FALSE}
 
 ```
@@ -499,7 +645,6 @@ if(run_gsea){
 ```{r, warning=FALSE, message=FALSE}
 
 ```
-
 
 ## Including Plots
 
